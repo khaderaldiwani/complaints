@@ -10,6 +10,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminAuthController;
+use App\Http\Controllers\Api\ComplaintController;
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
@@ -22,7 +23,14 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('logout', [AuthController::class, 'logout']);
  Route::post('admin/logout', [AdminAuthController::class, 'logout']);
  Route::post('admin/register', [AdminAuthController::class, 'register']);
-  Route::get('user', function (Request $request) {
+  // إضافة شكوى
+    Route::post('complaints/store', [ComplaintController::class, 'store']);
+
+    // عرض شكاوى المستخدم حسب الحالة
+    Route::get('complaints/status/{status}', [ComplaintController::class, 'listByStatus']);
+   // تفاصيل شكوى
+    Route::get('ل', [ComplaintController::class, 'show']);
+    Route::get('user', function (Request $request) {
         return $request->user();
     });
 });
