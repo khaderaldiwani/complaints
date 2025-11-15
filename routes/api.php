@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\Api\AgencyController;
 use App\Http\Controllers\Api\ComplaintController;
+use App\Http\Controllers\NotificationController;
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
@@ -49,6 +50,13 @@ Route::put('/employee/complaints/{id}/status', [ComplaintController::class, 'upd
 
     // فك حجز الشكوى
     Route::post('/employee/complaints/{id}/unlock', [ComplaintController::class, 'unlockComplaint']);
+     // get history
+    Route::get('/employee/complaints/{id}/history', [ComplaintController::class, 'getComplaintHistory']);
+// get notifications
+    Route::get('/user/notifications', [NotificationController::class , 'getNotifications']);
+//markAsRead
+    Route::post('/user/notifications/read/{id}', [NotificationController::class, 'markAsRead']);
+
 
 
     Route::get('user', function (Request $request) {

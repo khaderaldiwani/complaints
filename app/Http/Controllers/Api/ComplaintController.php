@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Complaint;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ComplaintController extends Controller
 {
@@ -235,11 +237,43 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
             'timestamp' => now()->toIso8601String(),
         ], 400);
     }
-
+$old_status=$complaint->status;
     // تحديث الحالة
     $complaint->update([
         'status' => $data['status']
     ]);
+    // تسجيل في السجل
+DB::table('complaint_history')->insert([
+    'action' => 'status_changed',
+    'old_value' => $old_status,
+    'new_value' => $data['status'],
+    'administrative_id' => $employee->id,
+    'complaint_id' => $complaint->id,
+    'date' => now(),
+    'created_at' => now(),
+    'updated_at' => now()
+]);
+$statusText = NotificationHelper::name($data['status']);
+
+NotificationHelper::send(
+    $complaint->user_id,
+    'تحديث حالة الشكوى',
+    "تم تغيير حالة الشكوى رقم {$complaint->id} إلى: {$statusText}."
+);
+
+// NotificationHelper::send(
+//     $complaint->user_id,
+//     'تحديث حالة الشكوى',
+//     "تم تغيير حالة الشكوى رقم {$complaint->id} إلى: {$statusText}."
+// );
+
+// إرسال إشعار للمستخدم
+NotificationHelper::send(
+    $complaint->user_id,
+    'تم تحديث حالة الشكوى',
+    'تم تغيير حالة الشكوى رقم ' . $complaint->id . ' إلى الحالة رقم ' . $data['status']
+);
+
 
     return response()->json([
         'success' => true,
@@ -305,10 +339,30 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
         'note' => 'required|string|max:255'
     ]);
 
+    $old_noti=$complaint->noti;
     // تحديث ملاحظة الشكوى
     $complaint->update([
         'noti' => $validated['note']
     ]);
+
+    DB::table('complaint_history')->insert([
+    'action' => 'note_added',
+    'old_value' => $old_noti,
+    'new_value' => $validated['note'],
+    'administrative_id' => $employee->id,
+    'complaint_id' => $complaint->id,
+    'date' => now(),
+    'created_at' => now(),
+    'updated_at' => now()
+]);
+
+
+NotificationHelper::send(
+    $complaint->user_id,
+    'تم إضافة ملاحظة جديدة على شكواك',
+    'قام الموظف بإضافة الملاحظة التالية: ' . $validated['note']
+);
+
 
     return response()->json([
         'success' => true,
@@ -318,42 +372,7 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
         'timestamp' => now()->toIso8601String(),
     ], 200);
 }
-// public function showEmployeeComplaint(Request $request, $id)
-// {
-//     $employee = $request->user();
 
-//     if ($employee->role != 2) {
-//         return response()->json([
-//             'success' => false,
-//             'message' => 'غير مصرح. هذا المسار خاص بالموظفين فقط.',
-//             'data' => null,
-//             'status_code' => 403,
-//             'timestamp' => now()->toIso8601String(),
-//         ], 403);
-//     }
-
-//     $complaint = Complaint::where('id', $id)
-//                           ->where('agency_id', $employee->id_agency)
-//                           ->first();
-
-//     if (!$complaint) {
-//         return response()->json([
-//             'success' => false,
-//             'message' => 'الشكوى غير موجودة أو لا تتبع جهتك.',
-//             'data' => null,
-//             'status_code' => 404,
-//             'timestamp' => now()->toIso8601String(),
-//         ], 404);
-//     }
-
-//     return response()->json([
-//         'success' => true,
-//         'message' => 'تفاصيل الشكوى.',
-//         'data' => $complaint,
-//         'status_code' => 200,
-//         'timestamp' => now()->toIso8601String(),
-//     ], 200);
-// }
 public function showEmployeeComplaint(Request $request, $id)
 {
     $employee = $request->user();
@@ -509,5 +528,51 @@ public function unlockComplaint(Request $request, $id)
         'timestamp' => now()->toIso8601String()
     ], 200);
 }
+
+public function getComplaintHistory(Request $request, $id)
+{
+    $employee = $request->user();
+
+    if ($employee->role != 2 && $employee->role != 1) {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصرح لك.',
+            'data' => null,
+            'status_code' => 403,
+            'timestamp' => now()->toIso8601String()
+        ], 403);
+    }
+
+    // تأكد أن الشكوى تتبع جهة الموظف (للموظفين فقط)
+    if ($employee->role == 2) {
+        $complaint = Complaint::where('id', $id)
+                              ->where('agency_id', $employee->id_agency)
+                              ->first();
+
+        if (!$complaint) {
+            return response()->json([
+                'success' => false,
+                'message' => 'الشكوى غير موجودة أو لا تنتمي لجهتك.',
+                'data' => null,
+                'status_code' => 404,
+                'timestamp' => now()->toIso8601String()
+            ], 404);
+        }
+    }
+
+    $history = DB::table('complaint_history')
+        ->where('complaint_id', $id)
+        ->orderBy('date', 'desc')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'سجل الشكوى.',
+        'data' => $history,
+        'status_code' => 200,
+        'timestamp' => now()->toIso8601String()
+    ], 200);
+}
+
 
 }
