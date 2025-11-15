@@ -210,7 +210,16 @@ public function updateStatus(Request $request, $id)
             'timestamp' => now()->toIso8601String(),
         ], 404);
     }
-
+//
+if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
+    return response()->json([
+        'success' => false,
+        'message' => 'لا يمكنك تعديل الشكوى لأنها محجوزة من موظف آخر.',
+        'data' => null,
+        'status_code' => 423,
+        'timestamp' => now()->toIso8601String()
+    ], 423);
+}
     // التحقق أن الحالة الجديدة صحيحة
     $data = $request->validate([
         'status' => 'required|integer|in:2,3,4'
@@ -280,6 +289,16 @@ public function addNote(Request $request, $id)
             'timestamp' => now()->toIso8601String(),
         ], 404);
     }
+    //
+if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
+    return response()->json([
+        'success' => false,
+        'message' => 'لا يمكنك تعديل الشكوى لأنها محجوزة من موظف آخر.',
+        'data' => null,
+        'status_code' => 423,
+        'timestamp' => now()->toIso8601String()
+    ], 423);
+}
 
     // التحقق من وجود الملاحظة
     $validated = $request->validate([
@@ -299,6 +318,42 @@ public function addNote(Request $request, $id)
         'timestamp' => now()->toIso8601String(),
     ], 200);
 }
+// public function showEmployeeComplaint(Request $request, $id)
+// {
+//     $employee = $request->user();
+
+//     if ($employee->role != 2) {
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'غير مصرح. هذا المسار خاص بالموظفين فقط.',
+//             'data' => null,
+//             'status_code' => 403,
+//             'timestamp' => now()->toIso8601String(),
+//         ], 403);
+//     }
+
+//     $complaint = Complaint::where('id', $id)
+//                           ->where('agency_id', $employee->id_agency)
+//                           ->first();
+
+//     if (!$complaint) {
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'الشكوى غير موجودة أو لا تتبع جهتك.',
+//             'data' => null,
+//             'status_code' => 404,
+//             'timestamp' => now()->toIso8601String(),
+//         ], 404);
+//     }
+
+//     return response()->json([
+//         'success' => true,
+//         'message' => 'تفاصيل الشكوى.',
+//         'data' => $complaint,
+//         'status_code' => 200,
+//         'timestamp' => now()->toIso8601String(),
+//     ], 200);
+// }
 public function showEmployeeComplaint(Request $request, $id)
 {
     $employee = $request->user();
@@ -327,6 +382,25 @@ public function showEmployeeComplaint(Request $request, $id)
         ], 404);
     }
 
+    //  منع موظف آخر من فتح التفاصيل إذا الشكوى محجوزة
+    if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
+
+        if ($complaint->locked_at && now()->diffInMinutes($complaint->locked_at) < 10) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكنك عرض تفاصيل الشكوى لأنها قيد المعالجة من موظف آخر.',
+                'data' => null,
+                'status_code' => 423,
+                'timestamp' => now()->toIso8601String(),
+            ], 423);
+        }
+    }
+    // حجز الشكوى
+    $complaint->update([
+        'locked_by' => $employee->id,
+        'locked_at' => now(),
+    ]);
+
     return response()->json([
         'success' => true,
         'message' => 'تفاصيل الشكوى.',
@@ -336,5 +410,104 @@ public function showEmployeeComplaint(Request $request, $id)
     ], 200);
 }
 
+public function lockComplaint(Request $request, $id)
+{
+    $employee = $request->user();
+
+    if ($employee->role != 2) {
+        return response()->json([
+            'success' => false,
+            'message' => 'هذا المسار خاص بالموظفين فقط.',
+            'data' => null,
+            'status_code' => 403,
+            'timestamp' => now()->toIso8601String()
+        ], 403);
+    }
+
+    $complaint = Complaint::where('id', $id)
+                          ->where('agency_id', $employee->id_agency)
+                          ->first();
+
+    if (!$complaint) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الشكوى غير موجودة أو لا تنتمي لجهتك.',
+            'data' => null,
+            'status_code' => 404,
+            'timestamp' => now()->toIso8601String()
+        ], 404);
+    }
+
+    // إذا كانت الشكوى محجوزة من موظف آخر
+    if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
+        // تحقق من الوقت — إذا مرّ أكثر من 10 دقائق يتم فك القفل تلقائيًا
+        if ($complaint->locked_at && now()->diffInMinutes($complaint->locked_at) < 10) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'الشكوى قيد المعالجة من موظف آخر.',
+                'data' => null,
+                'status_code' => 423,
+                'timestamp' => now()->toIso8601String()
+            ], 423);
+        }
+    }
+
+    // حجز الشكوى
+    $complaint->update([
+        'locked_by' => $employee->id,
+        'locked_at' => now(),
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم حجز الشكوى للمعالجة.',
+        'data' => $complaint,
+        'status_code' => 200,
+        'timestamp' => now()->toIso8601String()
+    ], 200);
+}
+
+
+public function unlockComplaint(Request $request, $id)
+{
+    $employee = $request->user();
+
+    $complaint = Complaint::find($id);
+
+    if (!$complaint) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الشكوى غير موجودة.',
+            'data' => null,
+            'status_code' => 404,
+            'timestamp' => now()->toIso8601String()
+        ], 404);
+    }
+
+    // السماح فقط لمن قام بالحجز أو الأدمن
+    if ($complaint->locked_by && $complaint->locked_by != $employee->id && $employee->role != 1) {
+        return response()->json([
+            'success' => false,
+            'message' => 'لا يمكنك فك حجز هذه الشكوى.',
+            'data' => null,
+            'status_code' => 403,
+            'timestamp' => now()->toIso8601String()
+        ], 403);
+    }
+
+    $complaint->update([
+        'locked_by' => null,
+        'locked_at' => null,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم فك الحجز.',
+        'data' => $complaint,
+        'status_code' => 200,
+        'timestamp' => now()->toIso8601String()
+    ], 200);
+}
 
 }

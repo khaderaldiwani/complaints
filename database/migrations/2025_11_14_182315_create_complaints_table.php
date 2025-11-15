@@ -18,6 +18,8 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');       // صاحب الشكوى
             $table->unsignedTinyInteger('status')->default(1); // 1,2,3,4
             $table->string('noti')->nullable();          // إشعار أو ملاحظة
+             $table->unsignedBigInteger('locked_by')->nullable();
+        $table->timestamp('locked_at')->nullable();
             $table->timestamps();
 
             // العلاقات

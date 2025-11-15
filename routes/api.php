@@ -44,6 +44,12 @@ Route::put('/employee/complaints/{id}/status', [ComplaintController::class, 'upd
     Route::put('/employee/complaints/{id}/note', [ComplaintController::class, 'addNote']);
 // عرض تفاصيل شكوى للموظف
     Route::get('/employee/complaints/{id}', [ComplaintController::class, 'showEmployeeComplaint']);
+      // حجز الشكوى
+    Route::post('/employee/complaints/{id}/lock', [ComplaintController::class, 'lockComplaint']);
+
+    // فك حجز الشكوى
+    Route::post('/employee/complaints/{id}/unlock', [ComplaintController::class, 'unlockComplaint']);
+
 
     Route::get('user', function (Request $request) {
         return $request->user();

@@ -14,7 +14,9 @@ class Complaint extends Model
         'agency_id',
         'user_id',
         'status',
-        'noti'
+        'noti',
+        'locked_by',
+        'locked_at',
     ];
 
     public function agency()
