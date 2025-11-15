@@ -19,6 +19,7 @@ Route::post('resend-otp', [AuthController::class, 'resendOtp']);
 Route::post('login', [AuthController::class, 'login']);
 Route::post('admin/login', [AdminAuthController::class, 'login']);
 
+
 // بعد التحقق سيحصل المستخدم على token ويمكن حماية المسارات بـ auth:sanctum
 Route::middleware('auth:sanctum')->group(function () {
 Route::post('logout', [AuthController::class, 'logout']);
@@ -37,6 +38,12 @@ Route::post('logout', [AuthController::class, 'logout']);
     Route::get('/employee/complaints', [ComplaintController::class, 'byEmployeeAgency']);
         // جلب شكاوى الجهة الخاصة بالموظف حسب الحالة
     Route::get('employee/complaints/status/{status}', [ComplaintController::class, 'byEmployeeAgencyAndStatus']);
+          // تعديل حالة شكوى
+Route::put('/employee/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
+// إضافة ملاحظة
+    Route::put('/employee/complaints/{id}/note', [ComplaintController::class, 'addNote']);
+// عرض تفاصيل شكوى للموظف
+    Route::get('/employee/complaints/{id}', [ComplaintController::class, 'showEmployeeComplaint']);
 
     Route::get('user', function (Request $request) {
         return $request->user();

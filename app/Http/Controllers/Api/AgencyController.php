@@ -23,11 +23,11 @@ class AgencyController extends Controller
         ], 200);
     }
 
-    public function byEmployeeAgencyAndStatus(Request $request, $status)
+    public function updateStatus(Request $request, $id)
 {
-    $employee = $request->user(); // الموظف الذي سجل دخول
+    $employee = $request->user();
 
-    // مسار الموظفين فقط
+    // فقط الموظف يستطيع تغيير الحالات
     if ($employee->role != 2) {
         return response()->json([
             'success' => false,
@@ -38,29 +38,50 @@ class AgencyController extends Controller
         ], 403);
     }
 
-    // يجب أن يكون مرتبطًا بجهة
+    // تحقق أن لديه جهة
     if (!$employee->id_agency) {
         return response()->json([
             'success' => false,
             'message' => 'لم يتم ربط هذا الموظف بأي جهة.',
             'data' => null,
-            'status_code'=> 400,
+            'status_code' => 400,
             'timestamp' => now()->toIso8601String(),
         ], 400);
     }
 
-    // جلب الشكاوى حسب الجهة والحالة
-    $complaints = Complaint::where('agency_id', $employee->id_agency)
-                            ->where('status', $status)
-                            ->get();
+    // تحقق من أن الشكوى موجودة في جهته فقط
+    $complaint = Complaint::where('id', $id)
+                          ->where('agency_id', $employee->id_agency)
+                          ->first();
+
+    if (!$complaint) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الشكوى غير موجودة أو لا تنتمي لجهتك.',
+            'data' => null,
+            'status_code' => 404,
+            'timestamp' => now()->toIso8601String(),
+        ], 404);
+    }
+
+    // التحقق أن الحالة الجديدة صحيحة
+    $data = $request->validate([
+        'status' => 'required|integer|in:2,3,4'
+    ]);
+
+    // تحديث الحالة
+    $complaint->update([
+        'status' => $data['status']
+    ]);
 
     return response()->json([
         'success' => true,
-        'message' => 'تم جلب شكاوى الجهة حسب الحالة بنجاح.',
-        'data' => $complaints,
+        'message' => 'تم تحديث حالة الشكوى بنجاح.',
+        'data' => $complaint,
         'status_code' => 200,
         'timestamp' => now()->toIso8601String(),
     ], 200);
 }
+
 
 }

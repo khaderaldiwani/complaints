@@ -169,4 +169,172 @@ public function byEmployeeAgencyAndStatus(Request $request, $status)
     ], 200);
 }
 
+
+public function updateStatus(Request $request, $id)
+{
+    $employee = $request->user();
+
+    // فقط الموظف يستطيع تغيير الحالات
+    if ($employee->role != 2) {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصرح. هذا المسار للموظفين فقط.',
+            'data' => null,
+            'status_code' => 403,
+            'timestamp' => now()->toIso8601String(),
+        ], 403);
+    }
+
+    // تحقق أن لديه جهة
+    if (!$employee->id_agency) {
+        return response()->json([
+            'success' => false,
+            'message' => 'لم يتم ربط هذا الموظف بأي جهة.',
+            'data' => null,
+            'status_code' => 400,
+            'timestamp' => now()->toIso8601String(),
+        ], 400);
+    }
+
+    // تحقق من أن الشكوى موجودة في جهته فقط
+    $complaint = Complaint::where('id', $id)
+                          ->where('agency_id', $employee->id_agency)
+                          ->first();
+
+    if (!$complaint) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الشكوى غير موجودة أو لا تنتمي لجهتك.',
+            'data' => null,
+            'status_code' => 404,
+            'timestamp' => now()->toIso8601String(),
+        ], 404);
+    }
+
+    // التحقق أن الحالة الجديدة صحيحة
+    $data = $request->validate([
+        'status' => 'required|integer|in:2,3,4'
+    ]);
+
+    // منع تعديل حالات غير منطقية (اختياري)
+    if ($complaint->status == $data['status']) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الحالة الجديدة مطابقة للحالة الحالية.',
+            'data' => null,
+            'status_code' => 400,
+            'timestamp' => now()->toIso8601String(),
+        ], 400);
+    }
+
+    // تحديث الحالة
+    $complaint->update([
+        'status' => $data['status']
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم تحديث حالة الشكوى بنجاح.',
+        'data' => $complaint,
+        'status_code' => 200,
+        'timestamp' => now()->toIso8601String(),
+    ], 200);
+}
+public function addNote(Request $request, $id)
+{
+    $employee = $request->user();
+
+    // السماح فقط للموظف (role=2)
+    if ($employee->role != 2) {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصرح لك. هذا المسار خاص بالموظفين فقط.',
+            'data' => null,
+            'status_code' => 403,
+            'timestamp' => now()->toIso8601String(),
+        ], 403);
+    }
+
+    // تحقق أن لديه جهة
+    if (!$employee->id_agency) {
+        return response()->json([
+            'success' => false,
+            'message' => 'لم يتم ربط الموظف بأي جهة.',
+            'data' => null,
+            'status_code' => 400,
+            'timestamp' => now()->toIso8601String(),
+        ], 400);
+    }
+
+    // جلب الشكوى بشرط أن تكون ضمن جهة الموظف
+    $complaint = Complaint::where('id', $id)
+                          ->where('agency_id', $employee->id_agency)
+                          ->first();
+
+    if (!$complaint) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الشكوى غير موجودة أو لا تنتمي لجهتك.',
+            'data' => null,
+            'status_code' => 404,
+            'timestamp' => now()->toIso8601String(),
+        ], 404);
+    }
+
+    // التحقق من وجود الملاحظة
+    $validated = $request->validate([
+        'note' => 'required|string|max:255'
+    ]);
+
+    // تحديث ملاحظة الشكوى
+    $complaint->update([
+        'noti' => $validated['note']
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم إضافة الملاحظة بنجاح.',
+        'data'=> $complaint,
+        'status_code' => 200,
+        'timestamp' => now()->toIso8601String(),
+    ], 200);
+}
+public function showEmployeeComplaint(Request $request, $id)
+{
+    $employee = $request->user();
+
+    if ($employee->role != 2) {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصرح. هذا المسار خاص بالموظفين فقط.',
+            'data' => null,
+            'status_code' => 403,
+            'timestamp' => now()->toIso8601String(),
+        ], 403);
+    }
+
+    $complaint = Complaint::where('id', $id)
+                          ->where('agency_id', $employee->id_agency)
+                          ->first();
+
+    if (!$complaint) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الشكوى غير موجودة أو لا تتبع جهتك.',
+            'data' => null,
+            'status_code' => 404,
+            'timestamp' => now()->toIso8601String(),
+        ], 404);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تفاصيل الشكوى.',
+        'data' => $complaint,
+        'status_code' => 200,
+        'timestamp' => now()->toIso8601String(),
+    ], 200);
+}
+
+
 }
