@@ -20,16 +20,12 @@ class ComplaintController extends Controller
         'file'        => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx'
     ]);
 
-    //
     $filePath = null;
 
 if ($request->hasFile('file')) {
     $stored = $request->file('file')->store('complaints_files', 'public');
-    $filePath = 'storage/' . $stored;   // ← هنا التعديل المطلوب
+    $filePath = 'storage/' . $stored;   
 }
-
-
-
     $complaint = Complaint::create([
         'type' => $data['type'],
         'address' => $data['address'],
@@ -69,12 +65,10 @@ public function listByStatus(Request $request, $status)
 
 public function show(Request $request, $id)
 {
-    // جلب الشكوى المطلوبة
     $complaint = Complaint::where('id', $id)
                            ->where('user_id', $request->user()->id) // منع الوصول لشكوى شخص آخر
                            ->first();
 
-    // في حال لم توجد الشكوى
     if (!$complaint) {
         return response()->json([
             'success' => false,
@@ -96,9 +90,8 @@ public function show(Request $request, $id)
 
 public function byEmployeeAgency(Request $request)
 {
-    $employee = $request->user(); // الموظف المسجل دخول
+    $employee = $request->user(); 
 
-    // التحقق أن المستخدم فعلاً موظف
     if ($employee->role != 2) {
         return response()->json([
             'success' => false,
@@ -109,7 +102,6 @@ public function byEmployeeAgency(Request $request)
         ], 403);
     }
 
-    // التحقق أن لديه جهة
     if (!$employee->id_agency) {
         return response()->json([
             'success' => false,
@@ -120,7 +112,6 @@ public function byEmployeeAgency(Request $request)
         ], 400);
     }
 
-    // جلب الشكاوى المرتبطة بجهة الموظف
     $complaints = Complaint::where('agency_id', $employee->id_agency)->get();
 
     return response()->json([
@@ -133,9 +124,8 @@ public function byEmployeeAgency(Request $request)
 }
 public function byEmployeeAgencyAndStatus(Request $request, $status)
 {
-    $employee = $request->user(); // الموظف الذي سجل دخول
+    $employee = $request->user(); 
 
-    // مسار الموظفين فقط
     if ($employee->role != 2) {
         return response()->json([
             'success' => false,
@@ -146,7 +136,6 @@ public function byEmployeeAgencyAndStatus(Request $request, $status)
         ], 403);
     }
 
-    // يجب أن يكون مرتبطًا بجهة
     if (!$employee->id_agency) {
         return response()->json([
             'success' => false,
@@ -157,7 +146,6 @@ public function byEmployeeAgencyAndStatus(Request $request, $status)
         ], 400);
     }
 
-    // جلب الشكاوى حسب الجهة والحالة
     $complaints = Complaint::where('agency_id', $employee->id_agency)
                             ->where('status', $status)
                             ->get();
@@ -176,7 +164,6 @@ public function updateStatus(Request $request, $id)
 {
     $employee = $request->user();
 
-    // فقط الموظف يستطيع تغيير الحالات
     if ($employee->role != 2) {
         return response()->json([
             'success' => false,
@@ -187,7 +174,6 @@ public function updateStatus(Request $request, $id)
         ], 403);
     }
 
-    // تحقق أن لديه جهة
     if (!$employee->id_agency) {
         return response()->json([
             'success' => false,
@@ -198,7 +184,6 @@ public function updateStatus(Request $request, $id)
         ], 400);
     }
 
-    // تحقق من أن الشكوى موجودة في جهته فقط
     $complaint = Complaint::where('id', $id)
                           ->where('agency_id', $employee->id_agency)
                           ->first();
@@ -212,7 +197,7 @@ public function updateStatus(Request $request, $id)
             'timestamp' => now()->toIso8601String(),
         ], 404);
     }
-//
+
 if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
     return response()->json([
         'success' => false,
@@ -222,12 +207,11 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
         'timestamp' => now()->toIso8601String()
     ], 423);
 }
-    // التحقق أن الحالة الجديدة صحيحة
+
     $data = $request->validate([
         'status' => 'required|integer|in:2,3,4'
     ]);
 
-    // منع تعديل حالات غير منطقية (اختياري)
     if ($complaint->status == $data['status']) {
         return response()->json([
             'success' => false,
@@ -238,12 +222,12 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
         ], 400);
     }
 $old_status=$complaint->status;
-    // تحديث الحالة
-    $complaint->update([
+    
+$complaint->update([
         'status' => $data['status']
     ]);
-    // تسجيل في السجل
-DB::table('complaint_history')->insert([
+
+    DB::table('complaint_history')->insert([
     'action' => 'status_changed',
     'old_value' => $old_status,
     'new_value' => $data['status'],
@@ -261,13 +245,6 @@ NotificationHelper::send(
     "تم تغيير حالة الشكوى رقم {$complaint->id} إلى: {$statusText}."
 );
 
-// NotificationHelper::send(
-//     $complaint->user_id,
-//     'تحديث حالة الشكوى',
-//     "تم تغيير حالة الشكوى رقم {$complaint->id} إلى: {$statusText}."
-// );
-
-// إرسال إشعار للمستخدم
 NotificationHelper::send(
     $complaint->user_id,
     'تم تحديث حالة الشكوى',
@@ -287,7 +264,6 @@ public function addNote(Request $request, $id)
 {
     $employee = $request->user();
 
-    // السماح فقط للموظف (role=2)
     if ($employee->role != 2) {
         return response()->json([
             'success' => false,
@@ -298,7 +274,6 @@ public function addNote(Request $request, $id)
         ], 403);
     }
 
-    // تحقق أن لديه جهة
     if (!$employee->id_agency) {
         return response()->json([
             'success' => false,
@@ -309,7 +284,6 @@ public function addNote(Request $request, $id)
         ], 400);
     }
 
-    // جلب الشكوى بشرط أن تكون ضمن جهة الموظف
     $complaint = Complaint::where('id', $id)
                           ->where('agency_id', $employee->id_agency)
                           ->first();
@@ -323,7 +297,6 @@ public function addNote(Request $request, $id)
             'timestamp' => now()->toIso8601String(),
         ], 404);
     }
-    //
 if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
     return response()->json([
         'success' => false,
@@ -334,13 +307,11 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
     ], 423);
 }
 
-    // التحقق من وجود الملاحظة
     $validated = $request->validate([
         'note' => 'required|string|max:255'
     ]);
 
     $old_noti=$complaint->noti;
-    // تحديث ملاحظة الشكوى
     $complaint->update([
         'noti' => $validated['note']
     ]);
@@ -401,7 +372,6 @@ public function showEmployeeComplaint(Request $request, $id)
         ], 404);
     }
 
-    //  منع موظف آخر من فتح التفاصيل إذا الشكوى محجوزة
     if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
 
         if ($complaint->locked_at && now()->diffInMinutes($complaint->locked_at) < 10) {
@@ -414,7 +384,6 @@ public function showEmployeeComplaint(Request $request, $id)
             ], 423);
         }
     }
-    // حجز الشكوى
     $complaint->update([
         'locked_by' => $employee->id,
         'locked_at' => now(),
@@ -457,9 +426,8 @@ public function lockComplaint(Request $request, $id)
         ], 404);
     }
 
-    // إذا كانت الشكوى محجوزة من موظف آخر
     if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
-        // تحقق من الوقت — إذا مرّ أكثر من 10 دقائق يتم فك القفل تلقائيًا
+
         if ($complaint->locked_at && now()->diffInMinutes($complaint->locked_at) < 10) {
 
             return response()->json([
@@ -472,7 +440,7 @@ public function lockComplaint(Request $request, $id)
         }
     }
 
-    // حجز الشكوى
+
     $complaint->update([
         'locked_by' => $employee->id,
         'locked_at' => now(),
@@ -504,7 +472,7 @@ public function unlockComplaint(Request $request, $id)
         ], 404);
     }
 
-    // السماح فقط لمن قام بالحجز أو الأدمن
+
     if ($complaint->locked_by && $complaint->locked_by != $employee->id && $employee->role != 1) {
         return response()->json([
             'success' => false,
@@ -543,7 +511,7 @@ public function getComplaintHistory(Request $request, $id)
         ], 403);
     }
 
-    // تأكد أن الشكوى تتبع جهة الموظف (للموظفين فقط)
+
     if ($employee->role == 2) {
         $complaint = Complaint::where('id', $id)
                               ->where('agency_id', $employee->id_agency)

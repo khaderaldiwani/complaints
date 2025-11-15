@@ -15,10 +15,10 @@ return new class extends Migration
 {
     Schema::create('notifications', function (Blueprint $table) {
         $table->id();
-        $table->unsignedBigInteger('user_id');     // المواطن المستهدف
-        $table->string('title');                   // عنوان الإشعار
-        $table->text('message');                   // نص الإشعار
-        $table->boolean('is_read')->default(false); // هل تمت قراءته؟
+        $table->unsignedBigInteger('user_id');     
+        $table->string('title');                   
+        $table->text('message');                    
+        $table->boolean('is_read')->default(false);   
         $table->timestamp('created_at')->useCurrent();
 
         $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

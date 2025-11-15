@@ -20,7 +20,6 @@ public function up()
             $table->timestamps();
         });
 
-        // إضافة بيانات افتراضية بعد إنشاء الجدول
         DB::table('agencies')->insert([
             ['name' => 'electricity', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'water',    'created_at' => now(), 'updated_at' => now()],

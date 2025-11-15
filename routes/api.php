@@ -21,7 +21,7 @@ Route::post('login', [AuthController::class, 'login']);
 Route::post('admin/login', [AdminAuthController::class, 'login']);
 
 
-// بعد التحقق سيحصل المستخدم على token ويمكن حماية المسارات بـ auth:sanctum
+
 Route::middleware('auth:sanctum')->group(function () {
 Route::post('logout', [AuthController::class, 'logout']);
  Route::post('admin/logout', [AdminAuthController::class, 'logout']);

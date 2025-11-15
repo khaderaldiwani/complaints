@@ -13,20 +13,20 @@ return new class extends Migration
         Schema::create('administrative', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('user_name')->unique();  // اسم المستخدم
+            $table->string('user_name')->unique();  
             $table->string('password');
             $table->unsignedTinyInteger('role'); // 1 = admin , 2 = employee
-            $table->unsignedBigInteger('id_agency')->nullable(); // لازم يكون موجود قبل FK
+            $table->unsignedBigInteger('id_agency')->nullable(); 
             $table->timestamps();
                $table->foreign('id_agency')->references('id')->on('agencies')->onDelete('set null');
         });
 
-        // إنشاء حساب أدمن افتراضي
+        
         DB::table('administrative')->insert([
             'name' => 'Khader Aldiwani',
             'user_name' => 'Khader',
             'password' => Hash::make('12345678'), 
-            'role' => 1, // 1 = admin,
+            'role' => 1, 
             'id_agency' => null,
             'created_at' => now(),
             'updated_at' => now(),

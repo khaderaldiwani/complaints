@@ -27,7 +27,6 @@ class AgencyController extends Controller
 {
     $employee = $request->user();
 
-    // فقط الموظف يستطيع تغيير الحالات
     if ($employee->role != 2) {
         return response()->json([
             'success' => false,
@@ -38,7 +37,6 @@ class AgencyController extends Controller
         ], 403);
     }
 
-    // تحقق أن لديه جهة
     if (!$employee->id_agency) {
         return response()->json([
             'success' => false,
@@ -49,7 +47,6 @@ class AgencyController extends Controller
         ], 400);
     }
 
-    // تحقق من أن الشكوى موجودة في جهته فقط
     $complaint = Complaint::where('id', $id)
                           ->where('agency_id', $employee->id_agency)
                           ->first();
@@ -64,12 +61,10 @@ class AgencyController extends Controller
         ], 404);
     }
 
-    // التحقق أن الحالة الجديدة صحيحة
     $data = $request->validate([
         'status' => 'required|integer|in:2,3,4'
     ]);
 
-    // تحديث الحالة
     $complaint->update([
         'status' => $data['status']
     ]);

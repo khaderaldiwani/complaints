@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    // Register endpoint
+    
     public function register(Request $request)
     {
         try {
@@ -23,7 +23,6 @@ class AuthController extends Controller
         'password' => 'required|string|min:6|confirmed',
     ]);
 
-    // 2️⃣ التحقق إذا كان البريد موجود مسبقًا
     $exists = User::where('email', $request->email)->exists();
     if ($exists) {
         return response()->json([
@@ -35,7 +34,6 @@ class AuthController extends Controller
     }
 
 
-        // create user (unverified)
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'] ?? null,
@@ -44,8 +42,7 @@ class AuthController extends Controller
             'is_verified' => false,
         ]);
 
-        // generate OTP
-        $code = rand(100000, 999999); // 6-digit
+        $code = rand(100000, 999999); 
         $user->verification_code = $code;
         $user->verification_expires_at = Carbon::now()->addMinutes(10);
         $user->save();
@@ -67,10 +64,9 @@ class AuthController extends Controller
         
     ],
     'status_code' => 200,
-    'timestamp' => Carbon::now()->toIso8601String(), // الصيغة ISO 8601
+    'timestamp' => Carbon::now()->toIso8601String(), 
 ], 201);
         } catch (ValidationException $e) {
-        // 7️⃣ إعادة JSON لأي خطأ في Validation
         return response()->json([
             'success' => false,
             'message' => 'خطأ في البيانات المدخلة',
@@ -82,7 +78,7 @@ class AuthController extends Controller
         
     }
 
-    // Verify OTP endpoint
+
     public function verifyOtp(Request $request)
     {
         try {
@@ -148,7 +144,7 @@ class AuthController extends Controller
         }
     }
 
-    // Resend OTP
+    
     public function resendOtp(Request $request)
     {
         $data = $request->validate([
@@ -186,8 +182,7 @@ class AuthController extends Controller
             Mail::to($user->email)->send(new OtpCodeMail($code, $user->name));
         }
 
-        // if phone: send SMS via provider (see snippet below)
-
+    
 
         return  response()->json([
         'success' => true,
@@ -236,7 +231,6 @@ public function login(Request $request)
         ], 403);
     }
 
-    // إنشاء الـ Token
     $token = $user->createToken('api_token')->plainTextToken;
 
     return response()->json([

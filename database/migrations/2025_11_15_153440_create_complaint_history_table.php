@@ -15,12 +15,12 @@ return new class extends Migration
 {
     Schema::create('complaint_history', function (Blueprint $table) {
         $table->id();
-        $table->string('action'); // نوع الإجراء (status_change, note_added)
+        $table->string('action');  
         $table->text('old_value')->nullable();
         $table->text('new_value')->nullable();
-        $table->unsignedBigInteger('administrative_id'); // الموظف الذي قام بالإجراء
-        $table->unsignedBigInteger('complaint_id');      // رقم الشكوى
-        $table->timestamp('date');                       // وقت العملية
+        $table->unsignedBigInteger('administrative_id'); 
+        $table->unsignedBigInteger('complaint_id');      
+        $table->timestamp('date');                      
         $table->timestamps();
 
         $table->foreign('administrative_id')->references('id')->on('administrative')->onDelete('cascade');
