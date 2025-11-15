@@ -10,6 +10,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminAuthController;
+use App\Http\Controllers\Api\AgencyController;
 use App\Http\Controllers\Api\ComplaintController;
 
 Route::post('register', [AuthController::class, 'register']);
@@ -29,7 +30,14 @@ Route::post('logout', [AuthController::class, 'logout']);
     // عرض شكاوى المستخدم حسب الحالة
     Route::get('complaints/status/{status}', [ComplaintController::class, 'listByStatus']);
    // تفاصيل شكوى
-    Route::get('ل', [ComplaintController::class, 'show']);
+    Route::get('/complaints/details/{status}', [ComplaintController::class, 'show']);
+    //get all agency
+    Route::get('/agencies', [AgencyController::class, 'getAll']);
+    //get complaints employee according agency
+    Route::get('/employee/complaints', [ComplaintController::class, 'byEmployeeAgency']);
+        // جلب شكاوى الجهة الخاصة بالموظف حسب الحالة
+    Route::get('employee/complaints/status/{status}', [ComplaintController::class, 'byEmployeeAgencyAndStatus']);
+
     Route::get('user', function (Request $request) {
         return $request->user();
     });
