@@ -56,7 +56,8 @@ Route::put('/employee/complaints/{id}/status', [ComplaintController::class, 'upd
     Route::get('/user/notifications', [NotificationController::class , 'getNotifications']);
 //markAsRead
     Route::post('/user/notifications/read/{id}', [NotificationController::class, 'markAsRead']);
-
+//عرض كل الشكاوى
+Route::get('/admin/complaints', [ComplaintController::class, 'index']);
 
 
     Route::get('user', function (Request $request) {

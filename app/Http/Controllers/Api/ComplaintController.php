@@ -542,5 +542,33 @@ public function getComplaintHistory(Request $request, $id)
     ], 200);
 }
 
+public function index(Request $request)
+{
+    $employee = $request->user(); 
+
+    if ($employee->role != 1) {
+        return response()->json([
+            'success' => false,
+            'message' => 'غير مصرح. هذا المسار للموظفين فقط.',
+            'data' => null,
+            'status_code' => 403,
+            'timestamp' => now()->toIso8601String(),
+        ], 403);
+    }
+    
+    // جلب جميع الشكاوى مع معلومات المستخدم والجهة
+    $complaints = Complaint::with(['user', 'agency'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم جلب جميع الشكاوى بنجاح.',
+        'data' => $complaints,
+        'status_code' => 200,
+        'timestamp' => now()->toIso8601String(),
+    ], 200);
+}
+
 
 }
