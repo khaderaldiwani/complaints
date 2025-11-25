@@ -50,7 +50,7 @@ Route::put('/employee/complaints/{id}/status', [ComplaintController::class, 'upd
 
     // فك حجز الشكوى
     Route::post('/employee/complaints/{id}/unlock', [ComplaintController::class, 'unlockComplaint']);
-     // get history
+ // get history
     Route::get('/employee/complaints/{id}/history', [ComplaintController::class, 'getComplaintHistory']);
 // get notifications
     Route::get('/user/notifications', [NotificationController::class , 'getNotifications']);
@@ -63,4 +63,26 @@ Route::get('/admin/complaints', [ComplaintController::class, 'index']);
     Route::get('user', function (Request $request) {
         return $request->user();
     });
+});
+
+
+
+Route::post('/test-fcm', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'topic' => 'required|string',
+        'title' => 'required|string',
+        'body'  => 'required|string',
+    ]);
+
+    $response = \App\Helpers\FcmV1::sendToTopic(
+        $request->topic,
+        $request->title,
+        $request->body
+    );
+
+    return response()->json([
+        'success' => true,
+        'message' => 'تم إرسال الإشعار بنجاح.',
+        'fcm_response' => json_decode($response, true),
+    ]);
 });

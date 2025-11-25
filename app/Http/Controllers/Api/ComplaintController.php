@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\FcmV1;
 use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Complaint;
@@ -44,7 +45,7 @@ if ($request->hasFile('file')) {
         'status_code' => 201,
         'timestamp' => now()->toIso8601String(),
     ], 201);
-}
+}   
 
 
 
@@ -252,6 +253,15 @@ NotificationHelper::send(
 );
 
 
+ // =========================
+    // 3) إرسال إشعار عبر Firebase API V1 Topic
+    // =========================
+    $topic =  $complaint->user_id;
+    $title = "تحديث على الشكوى";
+    $body  = "تم تغيير حالة الشكوى إلى: " . $this->statusText($data['status']);
+
+    FcmV1::sendToTopic($topic, $title, $body);
+
     return response()->json([
         'success' => true,
         'message' => 'تم تحديث حالة الشكوى بنجاح.',
@@ -334,6 +344,12 @@ NotificationHelper::send(
     'قام الموظف بإضافة الملاحظة التالية: ' . $validated['note']
 );
 
+  $topic =$complaint->user_id;
+    FcmV1::sendToTopic(
+        $topic,
+        "ملاحظة جديدة",
+        "لقد تمت إضافة ملاحظة جديدة على الشكوى."
+    );
 
     return response()->json([
         'success' => true,
