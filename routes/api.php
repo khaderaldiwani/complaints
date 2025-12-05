@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminManageAccountsController;
+use App\Http\Controllers\AdminUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -60,13 +61,17 @@ Route::middleware('auth:sanctum')->group(function () {
     //عرض كل الشكاوى
     Route::get('/admin/complaints', [ComplaintController::class, 'index']);
 
-//دارة الحسابات
+//دارة الاداريين
     Route::get('/admin/accounts', [AdminManageAccountsController::class, 'index']);
     Route::post('/admin/accounts', [AdminManageAccountsController::class, 'store']);
     Route::put('/admin/accounts/{id}', [AdminManageAccountsController::class, 'update']);
     Route::delete('/admin/accounts/{id}', [AdminManageAccountsController::class, 'destroy']);
     Route::post('/admin/accounts/{id}/status', [AdminManageAccountsController::class, 'changeStatus']);
-
+// إدارة المواطنين
+    Route::get('admin/users', [AdminUserController::class, 'index']);        
+    Route::post('admin/users/{id}/disable', [AdminUserController::class, 'disable']);
+    Route::post('admin/users/{id}/enable', [AdminUserController::class, 'enable']);
+    Route::delete('admin/users/{id}', [AdminUserController::class, 'delete']);
     Route::get('user', function (Request $request) {
         return $request->user();
     });

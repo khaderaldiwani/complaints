@@ -26,6 +26,9 @@ class User extends Authenticatable
         'verification_code',
         'verification_expires_at',
         'agency_id',
+        'status',
+        'failed_attempts',
+        'locked_until'
     ];
 
     protected $hidden = [
