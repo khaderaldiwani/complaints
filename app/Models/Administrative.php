@@ -10,14 +10,17 @@ class Administrative extends Model
     use HasApiTokens;
 
     protected $table = 'administrative';
+protected $fillable = [
+    'name',
+    'user_name',
+    'password',
+    'role',
+    'id_agency',
+    'status',
+    'failed_attempts',
+    'locked_until'
+];
 
-    protected $fillable = [
-        'name',
-        'user_name',
-        'password',
-        'role', // 1 أو 2
-        'id_agency'
-    ];
 
     protected $hidden = [
         'password'

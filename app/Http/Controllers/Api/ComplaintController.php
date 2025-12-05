@@ -246,16 +246,7 @@ NotificationHelper::send(
     "تم تغيير حالة الشكوى رقم {$complaint->id} إلى: {$statusText}."
 );
 
-// NotificationHelper::send(
-//     $complaint->user_id,
-//     'تم تحديث حالة الشكوى',
-//     'تم تغيير حالة الشكوى رقم ' . $complaint->id . ' إلى الحالة رقم ' . $data['status']
-// );
 
-
- // =========================
-    // 3) إرسال إشعار عبر Firebase API V1 Topic
-    // =========================
     $topic =  $complaint->user_id;
     $title = "تحديث على الشكوى";
     $body  = "تم تغيير حالة الشكوى إلى: " . $statusText;

@@ -17,8 +17,11 @@ return new class extends Migration
             $table->string('password');
             $table->unsignedTinyInteger('role'); // 1 = admin , 2 = employee
             $table->unsignedBigInteger('id_agency')->nullable(); 
+             $table->boolean('status')->default(1); // 1 = active , 0 = disabled
+        $table->unsignedTinyInteger('failed_attempts')->default(0);
+        $table->timestamp('locked_until')->nullable();
             $table->timestamps();
-               $table->foreign('id_agency')->references('id')->on('agencies')->onDelete('set null');
+            $table->foreign('id_agency')->references('id')->on('agencies')->onDelete('set null');
         });
 
         
