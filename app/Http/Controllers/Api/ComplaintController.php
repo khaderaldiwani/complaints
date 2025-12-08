@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\Audit;
 use App\Helpers\FcmV1;
 use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendFcmNotificationJob;
+use App\Jobs\SendNotificationJob;
 use App\Models\Complaint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Cache;
 class ComplaintController extends Controller
 {
     public function store(Request $request)
@@ -37,6 +40,19 @@ if ($request->hasFile('file')) {
         'status' => 1,
         'noti' => null,
     ]);
+    Cache::forget('statistics');
+Cache::forget("user_complaints_{$complaint->user_id}");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_1");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_2");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_3");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_4");
+Cache::forget("agency_complaints_{$complaint->agency_id}");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_1");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_2");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_3");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_4");
+    Cache::forget("complaint_{$complaint->id}_user_{$complaint->user_id}");
+
 
     return response()->json([
         'success' => true,
@@ -51,9 +67,14 @@ if ($request->hasFile('file')) {
 
 public function listByStatus(Request $request, $status)
 {
-    $complaints = Complaint::where('user_id', $request->user()->id)
+    $userId = $request->user()->id;
+    $cacheKey = "user_complaints_{$userId}_status_{$status}";
+    
+    $complaints = Cache::remember($cacheKey, 300, function () use ($userId, $status) {
+        return Complaint::where('user_id', $userId)
                             ->where('status', $status)
                             ->get();
+    });
 
     return response()->json([
         'success' => true,
@@ -66,9 +87,14 @@ public function listByStatus(Request $request, $status)
 
 public function show(Request $request, $id)
 {
-    $complaint = Complaint::where('id', $id)
-                           ->where('user_id', $request->user()->id) // منع الوصول لشكوى شخص آخر
+    $userId = $request->user()->id;
+    $cacheKey = "complaint_{$id}_user_{$userId}";
+    
+    $complaint = Cache::remember($cacheKey, 300, function () use ($id, $userId) {
+        return Complaint::where('id', $id)
+                        ->where('user_id', $userId) // منع الوصول لشكوى شخص آخر
                            ->first();
+    });
 
     if (!$complaint) {
         return response()->json([
@@ -113,7 +139,12 @@ public function byEmployeeAgency(Request $request)
         ], 400);
     }
 
-    $complaints = Complaint::where('agency_id', $employee->id_agency)->get();
+    $agencyId = $employee->id_agency;
+    $cacheKey = "agency_complaints_{$agencyId}";
+    
+    $complaints = Cache::remember($cacheKey, 300, function () use ($agencyId) {
+        return Complaint::where('agency_id', $agencyId)->get();
+    });
 
     return response()->json([
         'success' => true,
@@ -147,9 +178,14 @@ public function byEmployeeAgencyAndStatus(Request $request, $status)
         ], 400);
     }
 
-    $complaints = Complaint::where('agency_id', $employee->id_agency)
+    $agencyId = $employee->id_agency;
+    $cacheKey = "agency_complaints_{$agencyId}_status_{$status}";
+    
+    $complaints = Cache::remember($cacheKey, 300, function () use ($agencyId, $status) {
+        return Complaint::where('agency_id', $agencyId)
                             ->where('status', $status)
                             ->get();
+    });
 
     return response()->json([
         'success' => true,
@@ -223,7 +259,16 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
         ], 400);
     }
 $old_status=$complaint->status;
-    
+/////////////////
+    Audit::record(
+    'change_status',
+    ['status' => $complaint->status],
+    ['status' => $request->status],
+    auth()->user()->id,
+    'complaints',
+    $complaint->id
+);
+
 $complaint->update([
         'status' => $data['status']
     ]);
@@ -240,18 +285,33 @@ $complaint->update([
 ]);
 $statusText = NotificationHelper::name($data['status']);
 
-NotificationHelper::send(
+// إرسال الإشعارات عبر Queue
+dispatch(new SendNotificationJob(
     $complaint->user_id,
     'تحديث حالة الشكوى',
     "تم تغيير حالة الشكوى رقم {$complaint->id} إلى: {$statusText}."
-);
+));
 
-
-    $topic =  $complaint->user_id;
-    $title = "تحديث على الشكوى";
-    $body  = "تم تغيير حالة الشكوى إلى: " . $statusText;
-
-    FcmV1::sendToTopic($topic, $title, $body);
+// إرسال إشعار FCM عبر Queue
+dispatch(new SendFcmNotificationJob(
+    $complaint->user_id,
+    "تحديث على الشكوى",
+    "تم تغيير حالة الشكوى إلى: " . $statusText
+));
+//
+Cache::forget('statistics');
+Cache::forget("user_complaints_{$complaint->user_id}");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_1");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_2");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_3");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_4");
+Cache::forget("agency_complaints_{$complaint->agency_id}");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_1");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_2");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_3");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_4");
+Cache::forget("complaint_{$complaint->id}");
+    Cache::forget("complaint_{$complaint->id}_user_{$complaint->user_id}");
 
     return response()->json([
         'success' => true,
@@ -313,6 +373,16 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
     ]);
 
     $old_noti=$complaint->noti;
+/////////
+    Audit::record(
+    'add_note',
+    ['note' => $complaint->note],
+    ['note' => $request->note],
+    auth()->user()->id,
+    'complaints',
+    $complaint->id
+);
+
     $complaint->update([
         'noti' => $validated['note']
     ]);
@@ -329,18 +399,34 @@ if ($complaint->locked_by && $complaint->locked_by != $employee->id) {
 ]);
 
 
-NotificationHelper::send(
+// إرسال الإشعارات عبر Queue
+dispatch(new SendNotificationJob(
     $complaint->user_id,
     'تم إضافة ملاحظة جديدة على شكواك',
     'قام الموظف بإضافة الملاحظة التالية: ' . $validated['note']
-);
+));
 
-  $topic =$complaint->user_id;
-    FcmV1::sendToTopic(
-        $topic,
+// إرسال إشعار FCM عبر Queue
+dispatch(new SendFcmNotificationJob(
+    $complaint->user_id,
         "ملاحظة جديدة",
         "لقد تمت إضافة ملاحظة جديدة على الشكوى."
-    );
+));
+    //
+    Cache::forget("complaint_{$complaint->id}");
+    Cache::forget("complaint_{$complaint->id}_user_{$complaint->user_id}");
+Cache::forget("user_complaints_{$complaint->user_id}");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_1");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_2");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_3");
+    Cache::forget("user_complaints_{$complaint->user_id}_status_4");
+Cache::forget("agency_complaints_{$complaint->agency_id}");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_1");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_2");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_3");
+    Cache::forget("agency_complaints_{$complaint->agency_id}_status_4");
+Cache::forget('statistics');
+
 
     return response()->json([
         'success' => true,

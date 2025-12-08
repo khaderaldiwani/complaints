@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\ApiResponse;
+use App\Helpers\Audit;
 use App\Http\Controllers\Controller;
 use App\Mail\OtpCodeMail;
 use App\Models\Administrative;
@@ -11,6 +13,8 @@ use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use League\Config\Exception\ValidationException;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cache;
 
 class AdminAuthController extends Controller
 {
@@ -18,6 +22,46 @@ class AdminAuthController extends Controller
 
 
 public function register(Request $request)
+// {
+//         $admin = auth()->user();
+//         if ($admin->role != 1) {
+//             return response()->json(['message' => 'غير مصرح'], 403);
+//         }
+
+//         $validator = Validator::make($request->all(), [
+//             'name' => 'required|string',
+//             'user_name' => 'required|string|unique:administrative,user_name',
+//             'password' => 'required|string|min:6|confirmed',//
+//             'role' => 'required|in:1,2',  // 1 admin , 2 employee
+//             'id_agency' => 'nullable|exists:agencies,id'
+//         ]);
+
+//         if ($validator->fails()) {
+//             return response()->json(['errors' => $validator->errors()], 422);
+//         }
+
+//         $user = Administrative::create([
+//             'name' => $request->name,
+//             'user_name' => $request->user_name,
+//             'password' => Hash::make($request->password),
+//             'role' => $request->role,
+//             'id_agency' => $request->id_agency,
+//             'status' => 1
+//         ]);
+//         Audit::record(
+//     'create_admin_account',
+//     null,
+//     $user->toArray(),
+//     auth()->user()->id,
+//     'administrative',
+//     $user->id
+// );
+
+//     return ApiResponse::success('تم إنشاء الحساب بنجاح', $user);
+
+        
+//     }
+////
 {
     try {
         $currentUser = $request->user();
@@ -67,7 +111,19 @@ public function register(Request $request)
             2 => 'موظف'
         ];
         $roleText = $roles[$data['role']] ?? 'غير معروف';
-        
+        ////////////////////
+  Audit::record(
+    'create_admin_account',
+    null,
+    $user->toArray(),
+    auth()->user()->id,
+    'administrative',
+    $user->id
+);
+
+//7
+Cache::forget('admin_accounts');
+
         return response()->json([
             'success' => true,
             'message' => 'تم إنشاء المستخدم بنجاح',
@@ -100,6 +156,7 @@ public function register(Request $request)
         ], 500);
     }
 }
+
 private function getRoleText($roleId)
 {
     $roles = [

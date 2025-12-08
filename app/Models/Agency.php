@@ -26,4 +26,9 @@ class Agency extends Model
     return $this->hasMany(Administrative::class, 'id_agency');
 }
 
+public function complaints()
+{
+    return $this->hasMany(Complaint::class, 'agency_id');
+}
+
 }

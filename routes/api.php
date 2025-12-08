@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminManageAccountsController;
 use App\Http\Controllers\AdminUserController;
 use Illuminate\Http\Request;
@@ -14,7 +15,9 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\Api\AgencyController;
 use App\Http\Controllers\Api\ComplaintController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ReportController;
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
@@ -72,7 +75,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('admin/users/{id}/disable', [AdminUserController::class, 'disable']);
     Route::post('admin/users/{id}/enable', [AdminUserController::class, 'enable']);
     Route::delete('admin/users/{id}', [AdminUserController::class, 'delete']);
-    Route::get('user', function (Request $request) {
+    //سجل العمليات
+    Route::get('admin/audit-logs', [AuditLogController::class , 'index']);
+//الاحصائيات
+Route::get('admin/statistics', [AdminDashboardController::class, 'statistics']);
+//pdf
+Route::get('/admin/reports/complaints', [ReportController::class, 'complaintsReport']);   
+Route::get('user', function (Request $request) {
         return $request->user();
     });
 });
