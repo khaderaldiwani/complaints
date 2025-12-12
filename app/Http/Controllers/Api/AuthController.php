@@ -32,6 +32,10 @@ class AuthController extends Controller
             'timestamp' => now()->toIso8601String()
         ], 409);
     }
+    // send via email if provided
+        // if ($data['email']) {
+        //     Mail::to($data['email'])->send(new OtpCodeMail("000000", "ka"));
+        // }
 
 
         $user = User::create([
