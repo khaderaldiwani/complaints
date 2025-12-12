@@ -27,14 +27,19 @@ class FcmV1
         // If file missing, try to create from FIREBASE_CREDENTIALS_JSON env var
         if (!file_exists($credentialsPath)) {
             $json = env('FIREBASE_CREDENTIALS_JSON');
-            if (!empty($json)) {
+            $base64 = env('FIREBASE_CREDENTIALS_BASE64');
+            if (!empty($json) || !empty($base64)) {
+                $content = !empty($json) ? $json : base64_decode($base64);
+                if ($content === false) {
+                    throw new \InvalidArgumentException('Failed to decode FIREBASE_CREDENTIALS_BASE64.');
+                }
                 $dir = dirname($credentialsPath);
                 if (!is_dir($dir)) {
                     @mkdir($dir, 0755, true);
                 }
-                @file_put_contents($credentialsPath, $json);
+                @file_put_contents($credentialsPath, $content);
             } else {
-                throw new \InvalidArgumentException('Firebase credentials file not found. Set FIREBASE_CREDENTIALS or FIREBASE_CREDENTIALS_JSON in your environment.');
+                throw new \InvalidArgumentException('Firebase credentials file not found. Set FIREBASE_CREDENTIALS or FIREBASE_CREDENTIALS_JSON or FIREBASE_CREDENTIALS_BASE64 in your environment.');
             }
         }
 
