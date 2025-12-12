@@ -22,8 +22,12 @@ use App\Http\Controllers\ReportController;
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('resend-otp', [AuthController::class, 'resendOtp']);
-Route::post('login', [AuthController::class, 'login']);
-Route::post('admin/login', [AdminAuthController::class, 'login']);
+
+// Login routes مع throttle مخصص: 6 محاولات في الدقيقة فقط
+Route::withoutMiddleware('throttle:api')->middleware('throttle:login')->group(function () {
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('admin/login', [AdminAuthController::class, 'login']);
+});
 
 
 
