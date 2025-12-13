@@ -63,6 +63,7 @@ class RouteServiceProvider extends ServiceProvider
         // Rate limiter خاص بتسجيل الدخول: 6 محاولات في الدقيقة
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(6)->by($request->ip());
-        });
+        }
+    );
     }
 }

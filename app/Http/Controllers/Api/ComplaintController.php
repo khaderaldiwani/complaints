@@ -12,6 +12,8 @@ use App\Models\Complaint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 class ComplaintController extends Controller
 {
     public function store(Request $request)
@@ -27,8 +29,33 @@ class ComplaintController extends Controller
     $filePath = null;
 
 if ($request->hasFile('file')) {
-    $stored = $request->file('file')->store('complaints_files', 'public');
-    $filePath = 'storage/' . $stored;   
+    try {
+        // تحديد disk المستخدم (S3 أو public)
+        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+        
+        // رفع الملف
+        $stored = $request->file('file')->store('complaints_files', $disk);
+        
+        // الحصول على URL الصحيح
+        if ($disk === 's3') {
+            // لـ S3: استخدام URL مباشرة
+            $filePath = Storage::disk('s3')->url($stored);
+        } else {
+            // لـ local/public: استخدام URL من config
+            $filePath = Storage::disk('public')->url($stored);
+        }
+    } catch (\Exception $e) {
+        Log::error('فشل رفع الملف: ' . $e->getMessage(), [
+            'file_name' => $request->file('file')?->getClientOriginalName(),
+            'error' => $e->getTraceAsString()
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'فشل رفع الملف: ' . $e->getMessage(),
+            'status_code' => 500,
+            'timestamp' => now()->toIso8601String(),
+        ], 500);
+    }
 }
     $complaint = Complaint::create([
         'type' => $data['type'],
