@@ -92,7 +92,7 @@ public function show(Request $request, $id)
     
     $complaint = Cache::remember($cacheKey, 300, function () use ($id, $userId) {
         return Complaint::where('id', $id)
-                        ->where('user_id', $userId) // منع الوصول لشكوى شخص آخر
+                        ->where('user_id', $userId) 
                            ->first();
     });
 

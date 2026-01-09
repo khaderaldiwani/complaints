@@ -207,7 +207,7 @@ Cache::forget('admin_accounts');
         
 //     }
 
-    // ✔️ 3) تعديل حساب
+    // 
     public function update(Request $request, $id)
 {
     $admin = Administrative::find($id);
